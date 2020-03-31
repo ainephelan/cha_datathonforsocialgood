@@ -1,0 +1,202 @@
+---
+title: "HMM"
+author: "Pat Healy"
+date: "29 March 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Script for one training and one test HMM for hub data
+
+##Read in data
+
+
+```{r}
+internal_df <- read.csv("internal.csv")
+```
+#Remove the columns of unused variables
+```{r}
+#df <- internal_df[ -c(11:12, 19:21) ]
+```
+##Take the first hub
+```{r}
+library(dplyr)
+train_df <- filter(internal_df, HubRandomID == 15994)
+```
+
+```{r}
+#train_df <- train_df[ -c(10:14, 17:21, 29:31) ]
+```
+
+#Turn activity types into binary variables
+```{r}
+#short names
+unique(train_df$ShortName)
+```
+```{r}
+#Adding new variable for how participants compare to average
+train_df$TotalParticipants <- train_df$AdultParticipants + train_df$ChildParticipants
+#removing outliers
+train_df <- train_df[train_df$TotalParticipants <= 70,]
+train_df <- train_df[train_df$TotalParticipants > 0,]
+```
+```{r}
+train_df$AvgTotalParticipants <- mean(train_df$TotalParticipants)
+```
+```{r}
+train_df$DifferenceInParticipants <- train_df$TotalParticipants - train_df$AvgTotalParticipants 
+```
+
+
+```{r}
+#scale from 0 to 1
+train_df$DifferenceInParticipants_scaled <- (train_df$DifferenceInParticipants-min(train_df$DifferenceInParticipants))/
+  (max(train_df$DifferenceInParticipants)-min(train_df$DifferenceInParticipants))
+```
+
+```{r}
+#round out the number for defined states
+train_df <- train_df %>% rowwise %>%
+  mutate(Part_state = ifelse(DifferenceInParticipants_scaled >= 0.223, 1,0))   #ifelse(DifferenceInParticipants_scaled <= 0.33, -1, 0)))
+```
+
+
+
+#Add in Month and day of the week
+```{r}
+library(lubridate)
+
+library(tidyr)
+
+train_df <- mutate(train_df, Month = month(dmy(ActivityDate)))
+train_df <- mutate(train_df, Day = wday(dmy(ActivityDate)))
+train_df <- mutate(train_df, Year = year(dmy(ActivityDate)))
+```
+###removing Jan as an outlier for low results
+
+```{r}
+train_df <- train_df[train_df$Month >= 2,]
+#train_df <- train_df[train_df$Year >= 2019,]
+```
+
+
+
+```{r}
+#Scale the days and months from 0 to 1
+train_df$Month_Scaled <- (train_df$Month-min(train_df$Month))/
+  (max(train_df$Month)-min(train_df$Month))
+
+train_df$Day_Scaled <- (train_df$Day-min(train_df$Day))/
+  (max(train_df$Day)-min(train_df$Day))
+```
+
+
+
+#Run the model
+```{r}
+# Variables fitted:
+#"ShortName", "CategoryName", "Month_Scaled", "Day_Scaled"
+ ds1.mod1.3s <- depmix(DifferenceInParticipants_scaled ~ 1,  
+                       transition = ~ ShortName + Day_Scaled + Month_Scaled + CategoryName , data = train_df, nstates = 2, family=multinomial("identity"))
+ ds1.fm1.3s <- fit(ds1.mod1.3s)
+ 
+ summary(ds1.fm1.3s)
+```
+
+
+#Plotting the states
+```{r}
+library(ggplot2)
+library(tidyverse)
+#plotting Data Set 1 Training Model 1 with 3 states
+probs = posterior(ds1.fm1.3s)
+	
+	
+ 	plot((probs$state), type='s', main='Implied States', xlab='', ylab='State')
+ 	
+ 
+	matplot(probs[,-1], type='l', main='Probabilities', ylab='Probability')
+		legend(x='topright', c('State1','State2'),  fill=1:2, bty='n')
+		
+		
+
+```
+
+#Using stepwise to find best order of variables for the model. Judgement is made based on how much they decrease the log likelihood. 
+
+```{r}
+#run through all variables to find highest log lik
+#tm2.fcov1 is training model 2 fitted covariates 1
+tm1.fcov1 <- lapply(train_df[c( "ShortName", "CategoryName", "Month_Scaled", "Day_Scaled" )], function(w) fit((depmix(DifferenceInParticipants_scaled ~ 1, data = train_df, transition = ~ w, nstates = 3, family=multinomial("identity"))), verbose = FALSE, emc=em.control(rand=TRUE)))
+```
+
+```{r}
+#Pulling covergence log likelihoods into a dataframe
+tm1.fcov1_df <-  as.data.frame(
+  c(logLik(tm1.fcov1$ShortName), logLik(tm1.fcov1$CategoryName),
+    logLik(tm1.fcov1$Month_Scaled), logLik(tm1.fcov1$Day_Scaled)
+    )
+  )
+tm1.fcov1_df$newcolumn<-c( "ShortName", "CategoryName", "Month_Scaled", "Day_Scaled")
+names(tm1.fcov1_df) <- c("convergence.loglik", "Variables")
+#print variable with the highest convergence log likelihood
+tm1.fcov1_df %>% 
+   slice(which.max(convergence.loglik))
+```
+##Second best variable
+```{r}
+#run through all variables to find highest log lik
+#tm2.fcov1 is training model 2 fitted covariates 1
+tm1.fcov2 <- lapply(train_df[c( "CategoryName", "Month_Scaled", "Day_Scaled" )], function(w) fit((depmix(DifferenceInParticipants_scaled ~ 1, data = train_df, transition = ~ w, nstates = 3, family=multinomial("identity"))), verbose = FALSE, emc=em.control(rand=TRUE)))
+```
+
+```{r}
+#Pulling covergence log likelihoods into a dataframe
+tm1.fcov2_df <-  as.data.frame(
+  c( logLik(tm1.fcov2$CategoryName),
+    logLik(tm1.fcov2$Month_Scaled), logLik(tm1.fcov2$Day_Scaled)
+    )
+  )
+tm1.fcov2_df$newcolumn<-c(  "CategoryName", "Month_Scaled", "Day_Scaled")
+names(tm1.fcov2_df) <- c("convergence.loglik", "Variables")
+#print variable with the highest convergence log likelihood
+tm1.fcov2_df %>% 
+   slice(which.max(convergence.loglik))
+```
+
+#find the last 2 variables
+
+```{r}
+#run through all variables to find highest log lik
+#tm2.fcov1 is training model 2 fitted covariates 1
+tm1.fcov3 <- lapply(train_df[c( "CategoryName", "Month_Scaled")], function(w) fit((depmix(DifferenceInParticipants_scaled ~ 1, data = train_df, transition = ~ w, nstates = 3, family=multinomial("identity"))), verbose = FALSE, emc=em.control(rand=TRUE)))
+```
+
+```{r}
+#Pulling covergence log likelihoods into a dataframe
+tm1.fcov3_df <-  as.data.frame(
+  c( logLik(tm1.fcov2$CategoryName),
+    logLik(tm1.fcov2$Month_Scaled)
+    )
+  )
+tm1.fcov3_df$newcolumn<-c(  "CategoryName", "Month_Scaled")
+names(tm1.fcov3_df) <- c("convergence.loglik", "Variables")
+#print variable with the highest convergence log likelihood
+tm1.fcov3_df %>% 
+   slice(which.max(convergence.loglik))
+```
+
+
+
+
+
+
+
+We have something to compare to now so add holidays and funding info if available
+Also remove outliers.
+
+
+
