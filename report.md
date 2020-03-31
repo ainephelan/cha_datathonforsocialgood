@@ -9,7 +9,7 @@ potential of this approach and the results have not been cross
 validated.
 
 Using Hub data we implement a Hidden Markov Model to show that by
-utilising observed hub activity can be used build a generalised method
+utilizing observed hub activity can be used build a generalized method
 for forecasting hub performance.
 
 2.1 What is a Hidden Markov Model?
@@ -20,11 +20,11 @@ about the future based on the sequence of events we have observed in our
 data. To outline the relevance of this model we will highlight an
 example described by Eisner (2002). Suppose we want to study the
 sequence of Hot(H) and Cold(C) days to predict how much ice-cream our
-Neighbour will eat every day. If we have observed how many ice-creams
-our neighbour has eaten over three dats (e.g., 3 1 3 ) for a given
-sequence of weather (e.g., H H C) we can estimate the likelihood of this
-many ice-creams being eaten each day. As we build up more information we
-can begin to forecast how many ice-creams our neighbour will eat.
+Neighbor will eat every day. If we have observed how many ice-creams our
+neighbor has eaten over three days (e.g., 3 1 3 ) for a given sequence
+of weather (e.g., H H C) we can estimate the likelihood of this many
+ice-creams being eaten each day. As we build up more information we can
+begin to forecast how many ice-creams our neighbor will eat.
 
 2.2 How do HMM's apply to Community Hubs Data?
 ----------------------------------------------
@@ -36,7 +36,7 @@ trajectory as well as hubs with similar predictors of performance.
 What this means is that we want to group hubs with similar indicators
 for how they are performing based on scheduled activities across time.
 
-We beilieve that a HMM is both better suited to the categorical data and
+We believe that a HMM is both better suited to the categorical data and
 also easier to implement than a Time Series Regression. When clustering
 is performed using categorical variables, these clusters are incredibly
 hard to transfer into a time series.We hope that applying a HMM will
@@ -54,8 +54,8 @@ each school and community.
 --------------------
 
 First we choose a single hub 15994. Then we remove outliers and rows
-with zero participants. Our suggestion for predicitng zero values is to
-explain their presence with clustering and by incoperating important
+with zero participants. Our suggestion for predicting zero values is to
+explain their presence with clustering and by incorporating important
 dates such as holidays. This can be achieved with the R package Naniar.
 (Tierney 2019)
 
@@ -66,7 +66,7 @@ for our model.
 ----------------------
 
 We use the DepmixS4 package Visser, I., & Speekenbrink, M. (2010) in R
-for Hidden Markov Models. We use a multinomial distribution to best
+for Hidden Markov Models. We use a multinational distribution to best
 capture the categorical distribution of the high dimensional data. We
 start with a 2 state model for simplicity. Our two states are State 1
 Performing Below average. State 2 Performing at or above average
@@ -74,13 +74,13 @@ Performing Below average. State 2 Performing at or above average
 To build an equation we start with a small number of variables. We
 choose variables which exist in all hubs and all years.  
 "ShortName", "CategoryName", "Month" and "Day" Month and Day are taken
-out of the timestamp using the Lubridate package in R and scaled from 0
+out of the time stamp using the Lubridate package in R and scaled from 0
 to 1 for comparing the results between the two. Names are textual data
 and don’t need to be scaled.
 
-We use LogLikelihood calculated from the DepmixS4 packaged to order the
-variables in our equation based on how they perform at predicting Hb
-performance (from best to worst). This is done using a stepwise
+We use Log Likelihood calculated from the DepmixS4 packaged to order the
+variables in our equation based on how they perform at predicting hub
+performance (from best to worst). This is done using a step wise
 approach. Find the first best variable, remove that from the process and
 repeat to find the next best variable and so on.
 
@@ -105,22 +105,22 @@ attendance
 In state 2 there was a 99% probability of having high attendance.
 
 As we have trained on quite a small sample size of a single hub we are
-quite sceptical of such a high probability for (State 2) and would
+quite skeptical of such a high probability for (State 2) and would
 expect this to drop once we look at more hubs.
 
 These results sound promising but this is only a training model so the
 results are still quite unstable and need to be cross validated by
 testing on other hubs.  
 \#\# 2.6 Visual Comparison We use visuals to observe how well our
-predicted states match up to the actual perfomance of Hubs implied by
+predicted states match up to the actual performance of Hubs implied by
 the attendance figures. Given the large variation in attendance week to
-week, these plots will look quite messy to if you havent seen them
+week, these plots will look quite messy to if you haven't seen them
 before. For example what we want to see is that when there is a high
 probability of the hub being in an above active state (State 2) that
 this looks very similar to attendance at the same point on the X-axis.
 When we have a longer period of being in State 2 in (Implied State plot)
-we want to the corresponding proability line for State 2 (red) to be at
-the top in the (Probabilites plot) this is largely what we see which is
+we want to the corresponding probability line for State 2 (red) to be at
+the top in the (Probabilities plot) this is largely what we see which is
 promising.
 
 ### x.png
@@ -131,7 +131,7 @@ promising.
 -----------------------------
 
 Run this training model for other hubs to cross validate the results.
-Look to expand the equation to improve the predicition scores. And begin
+Look to expand the equation to improve the prediction scores. And begin
 to cluster the hubs.
 
 2.8 References
