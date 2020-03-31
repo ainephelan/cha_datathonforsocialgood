@@ -75,7 +75,7 @@ train_df <- mutate(train_df, Month = month(dmy(ActivityDate)))
 train_df <- mutate(train_df, Day = wday(dmy(ActivityDate)))
 train_df <- mutate(train_df, Year = year(dmy(ActivityDate)))
 ```
-###removing Jan
+###removing Jan as an outlier for low results
 
 ```{r}
 train_df <- train_df[train_df$Month >= 2,]
@@ -91,6 +91,38 @@ train_df$Month_Scaled <- (train_df$Month-min(train_df$Month))/
 
 train_df$Day_Scaled <- (train_df$Day-min(train_df$Day))/
   (max(train_df$Day)-min(train_df$Day))
+```
+
+
+
+#Run the model
+```{r}
+# Variables fitted:
+#"ShortName", "CategoryName", "Month_Scaled", "Day_Scaled"
+ ds1.mod1.3s <- depmix(DifferenceInParticipants_scaled ~ 1,  
+                       transition = ~ ShortName + Day_Scaled + Month_Scaled + CategoryName , data = train_df, nstates = 2, family=multinomial("identity"))
+ ds1.fm1.3s <- fit(ds1.mod1.3s)
+ 
+ summary(ds1.fm1.3s)
+```
+
+
+#Plotting the states
+```{r}
+library(ggplot2)
+library(tidyverse)
+#plotting Data Set 1 Training Model 1 with 3 states
+probs = posterior(ds1.fm1.3s)
+	
+	
+ 	plot((probs$state), type='s', main='Implied States', xlab='', ylab='State')
+ 	
+ 
+	matplot(probs[,-1], type='l', main='Probabilities', ylab='Probability')
+		legend(x='topright', c('State1','State2'),  fill=1:2, bty='n')
+		
+		
+
 ```
 
 #Using stepwise to find best order of variables for the model. Judgement is made based on how much they decrease the log likelihood. 
@@ -167,36 +199,4 @@ We have something to compare to now so add holidays and funding info if availabl
 Also remove outliers.
 
 
-
-
-
-#Run the model
-```{r}
-# Variables fitted:
-#"ShortName", "CategoryName", "Month_Scaled", "Day_Scaled"
- ds1.mod1.3s <- depmix(DifferenceInParticipants_scaled ~ 1,  
-                       transition = ~ ShortName + Day_Scaled + Month_Scaled + CategoryName , data = train_df, nstates = 2, family=multinomial("identity"))
- ds1.fm1.3s <- fit(ds1.mod1.3s)
- 
- summary(ds1.fm1.3s)
-```
-
-
-#Plotting the states
-```{r}
-library(ggplot2)
-library(tidyverse)
-#plotting Data Set 1 Training Model 1 with 3 states
-probs = posterior(ds1.fm1.3s)
-	
-	
- 	plot((probs$state), type='s', main='Implied States', xlab='', ylab='State')
- 	
- 
-	matplot(probs[,-1], type='l', main='Probabilities', ylab='Probability')
-		legend(x='topright', c('State1','State2'),  fill=1:2, bty='n')
-		
-		
-
-```
 
